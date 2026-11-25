@@ -21,10 +21,10 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- React 18 & Babel Standalone (No build step required for GitHub Pages) -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- React 18 & Babel Standalone via reliable Cloudflare CDN -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
   <style>
     /* Smooth custom scrollbars */
@@ -50,10 +50,74 @@
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
-  <div id="root"></div>
+  <div id="root">
+    <!-- Visible while scripts load so the screen is never blank -->
+    <div id="boot-loader" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#334155;padding:24px;text-align:center;">
+      <div style="width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#2563eb;border-radius:9999px;animation:spin 0.8s linear infinite;margin-bottom:14px;"></div>
+      <div style="font-weight:700;font-size:16px;">Loading Stager App...</div>
+      <div id="boot-error" style="margin-top:12px;max-width:460px;font-size:13px;color:#b91c1c;display:none;background:#fef2f2;border:1px solid #fecaca;padding:12px;border-radius:12px;"></div>
+    </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+  </div>
+
+  <!-- Global Error & Load Watchdog (prevents silent blank screens) -->
+  <script>
+    window.__STAGER_MOUNTED__ = false;
+    function showBootError(msg) {
+      var el = document.getElementById("boot-error");
+      if (el) {
+        el.style.display = "block";
+        el.textContent = msg;
+      }
+    }
+    window.addEventListener("error", function (e) {
+      if (!window.__STAGER_MOUNTED__) {
+        showBootError("App failed to start: " + (e.message || "Script error. Try refreshing."));
+      }
+    });
+    setTimeout(function () {
+      if (!window.__STAGER_MOUNTED__) {
+        if (typeof React === "undefined" || typeof ReactDOM === "undefined" || typeof Babel === "undefined") {
+          showBootError("Could not load required libraries (React/Babel). Check your internet connection or ad-blocker and refresh.");
+        } else {
+          showBootError("The app took too long to start. Try refreshing the page or clearing your browser cache.");
+        }
+      }
+    }, 8000);
+  </script>
 
   <script type="text/babel">
     const { useState, useRef, useEffect } = React;
+
+    // Catch any React runtime error and show it on screen instead of a blank page
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, message: "" };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, message: error?.message || "Unexpected error" };
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+              <div className="max-w-md w-full bg-white border border-red-200 rounded-2xl p-6 shadow-lg space-y-3">
+                <h2 className="text-lg font-bold text-red-700">Something went wrong</h2>
+                <p className="text-sm text-slate-600">{this.state.message}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl"
+                >
+                  Reload App
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
 
     /* =========================================================================
        INLINE SVG ICONS (Zero external icon CDN failures)
@@ -1265,7 +1329,12 @@ CRITICAL INSTRUCTIONS:
     };
 
     const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+    window.__STAGER_MOUNTED__ = true;
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
   </script>
 </body>
 </html>
