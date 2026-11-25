@@ -318,6 +318,35 @@
       const [error, setError] = useState(null);
       const fileInputRef = useRef(null);
 
+      // --- Enhancement & UI State ---
+      const [isDragging, setIsDragging] = useState(false);
+      const [aspectRatio, setAspectRatio] = useState("1:1");
+      const [frameStyle, setFrameStyle] = useState("None");
+      const [watermarkText, setWatermarkText] = useState("JRG Custom Builds");
+      const [sliderPosition, setSliderPosition] = useState(50);
+      const [showSlider, setShowSlider] = useState(false);
+      const [history, setHistory] = useState([]);
+      const [queue, setQueue] = useState([]);
+      const [aiSuggestions, setAiSuggestions] = useState([]);
+      const [isAnalyzing, setIsAnalyzing] = useState(false);
+      const [statusToast, setStatusToast] = useState(null);
+      const toastTimeoutRef = useRef(null);
+
+      // Show a temporary status toast notification
+      const notify = (msg) => {
+        setStatusToast(msg);
+        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = setTimeout(() => setStatusToast(null), 3500);
+      };
+
+      // Open the private API Key & Model settings modal
+      const openSettings = () => {
+        setTempKey(apiKey);
+        setTempModel(imageModel);
+        setShowKeyText(false);
+        setShowSettingsModal(true);
+      };
+
       // Save API Key & Model to localStorage + Cookie fallback
       const saveSettings = (e) => {
         e.preventDefault();
