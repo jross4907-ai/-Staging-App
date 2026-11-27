@@ -21,7 +21,7 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- React 18 & Babel Standalone via reliable Cloudflare CDN -->
+  <!-- React 18 & Babel Standalone via Cloudflare CDN -->
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -60,7 +60,7 @@
     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   </div>
 
-  <!-- Global Error & Load Watchdog (prevents silent blank screens) -->
+  <!-- Global Error & Load Watchdog -->
   <script>
     window.__STAGER_MOUNTED__ = false;
     function showBootError(msg) {
@@ -89,7 +89,7 @@
   <script type="text/babel">
     const { useState, useRef, useEffect } = React;
 
-    // Catch any React runtime error and show it on screen instead of a blank page
+    // Catch any React runtime error and display a helpful screen
     class ErrorBoundary extends React.Component {
       constructor(props) {
         super(props);
@@ -120,7 +120,7 @@
     }
 
     /* =========================================================================
-       INLINE SVG ICONS (Zero external icon CDN failures)
+       INLINE SVG ICONS
        ========================================================================= */
     const Icon = ({ children, size = 20, className = "" }) => (
       <svg
@@ -269,9 +269,7 @@
       try {
         const expires = new Date(Date.now() + days * 864e5).toUTCString();
         document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-      } catch (e) {
-        // Ignore cookie errors in restricted contexts
-      }
+      } catch (e) {}
     };
 
     const getCookie = (name) => {
@@ -331,7 +329,6 @@
           const decoded = decodeURIComponent(match[1]).trim();
           if (decoded) {
             savePersistent(STORAGE_KEY_API, decoded);
-            // Clean key from address bar after loading
             if (window.history && window.history.replaceState) {
               window.history.replaceState(null, "", window.location.pathname + window.location.search);
             }
@@ -341,6 +338,60 @@
       } catch (e) {}
       return "";
     };
+
+    /* =========================================================================
+       PROJECT CATEGORIES, PLACEMENTS & PRESET SCENES
+       ========================================================================= */
+    const STAGE_CATEGORIES = [
+      {
+        id: "flag",
+        title: "Wood Flag",
+        subtitle: "Wavy & Rustic Flags",
+        badge: "🇺🇸",
+        defaultType: "Wood Wavy American Flag",
+        defaultSize: '36" x 19.5"',
+        defaultPlacement: "Wall Mounted / Floating",
+        presetCategory: "Living & Wall",
+        defaultPrompt:
+          "Mounted on the wall of a well-lit, rustic living room above a brick fireplace. The lighting should be realistic, cozy, and high quality."
+      },
+      {
+        id: "cross",
+        title: "Floating Cross",
+        subtitle: "3D Wall Crosses",
+        badge: "✝️",
+        defaultType: "Floating Wooden Cross",
+        defaultSize: '24" x 15"',
+        defaultPlacement: "Wall Mounted / Floating",
+        presetCategory: "Crosses",
+        defaultPrompt:
+          "Mounted floating slightly off a bright white farmhouse shiplap entryway wall, casting a soft realistic 3D shadow behind it. Warm natural morning light and a console table with greenery below."
+      },
+      {
+        id: "seasonal",
+        title: "Seasonal Item",
+        subtitle: "Fall, Christmas, Spring",
+        badge: "🍂",
+        defaultType: "Seasonal Wood Decor",
+        defaultSize: '18" x 14"',
+        defaultPlacement: "Tabletop / Mantel / Shelf",
+        presetCategory: "Seasonal",
+        defaultPrompt:
+          "Staged on a welcoming covered farmhouse front porch decorated for Fall, surrounded by pumpkins, mums in rustic planters, and warm autumn afternoon sunlight."
+      },
+      {
+        id: "other",
+        title: "Other Project",
+        subtitle: "Boards, Signs & More",
+        badge: "🪵",
+        defaultType: "Custom Woodworking Project",
+        defaultSize: '18" x 12"',
+        defaultPlacement: "Auto (Based on Scene)",
+        presetCategory: "All",
+        defaultPrompt:
+          "Placed in a modern farmhouse kitchen with bright natural light, white marble countertops, and rustic accents."
+      }
+    ];
 
     const QUICK_PROJECT_TYPES = [
       { label: "Wood Wavy Flag", size: '36" x 19.5"', placement: "Wall Mounted / Floating" },
@@ -353,10 +404,26 @@
     ];
 
     const PLACEMENT_OPTIONS = [
-      "Auto (Based on Scene)",
-      "Wall Mounted / Floating",
-      "Tabletop / Mantel / Shelf",
-      "Front Porch / Floor Standing"
+      {
+        value: "Wall Mounted / Floating",
+        instruction:
+          "Mount the piece securely on the wall (or floating slightly off the wall with realistic 3D standoff depth and soft natural drop shadows behind it)."
+      },
+      {
+        value: "Tabletop / Mantel / Shelf",
+        instruction:
+          "Place the piece resting naturally on a flat tabletop, fireplace mantel, kitchen counter, or decorative shelf with grounded contact shadows."
+      },
+      {
+        value: "Front Porch / Floor Standing",
+        instruction:
+          "Stand or lean the piece naturally on a covered front porch or entryway floor next to the front door, grounded with realistic shadows."
+      },
+      {
+        value: "Auto (Based on Scene)",
+        instruction:
+          "Place the piece naturally in the scene in the most realistic orientation for this type of woodworking project."
+      }
     ];
 
     const PRESET_CATEGORIES = [
@@ -369,59 +436,141 @@
     ];
 
     const PRESET_PROMPTS = [
-      // Crosses & Faith
-      { category: "Crosses", label: "Cross: Sunlit Shiplap Wall", text: "Mounted floating slightly off a bright white farmhouse shiplap entryway wall, casting a soft realistic 3D shadow behind it. Warm natural morning light and a console table with greenery below." },
-      { category: "Crosses", label: "Cross: Warm Entryway", text: "Mounted prominently on a warm neutral plaster wall in an inviting home entryway above a rustic wooden bench with neutral throw pillows. Soft natural sunlight." },
-      { category: "Crosses", label: "Cross: Cozy Bedroom Wall", text: "Mounted as a peaceful focal point on a soft beige bedroom wall above a wooden headboard. Warm, serene afternoon lighting and cozy linen bedding." },
-      { category: "Crosses", label: "Cross: Fireplace Mantel", text: "Mounted above a rustic timber fireplace mantel with subtle neutral candlesticks and eucalyptus garland. Cozy, welcoming living room lighting." },
-      { category: "Crosses", label: "Cross: Prayer / Reading Nook", text: "Mounted on a textured warm gray wall in a quiet reading nook next to a cozy armchair and soft floor lamp glow." },
-
-      // Seasonal Items
-      { category: "Seasonal", label: "Fall: Front Porch", text: "Staged on a welcoming covered farmhouse front porch decorated for Fall, surrounded by pumpkins, mums in rustic planters, and warm autumn afternoon sunlight." },
-      { category: "Seasonal", label: "Fall: Cozy Mantel", text: "Staged on a rustic wood fireplace mantel decorated for Autumn with warm amber candlelight, subtle fall leaves, and cozy living room lighting." },
-      { category: "Seasonal", label: "Christmas: Fireplace Mantel", text: "Staged in a warm, festive living room decorated for Christmas with pine garland, warm white twinkle lights, and a glowing fireplace in the background." },
-      { category: "Seasonal", label: "Christmas: Winter Porch", text: "Staged on a charming winter front porch with evergreen garlands, red berries, warm lantern glow, and soft winter daylight." },
-      { category: "Seasonal", label: "Spring: Farmhouse Shelf", text: "Staged on a bright farmhouse entryway console table decorated for Spring with fresh white florals, greenery, and airy natural window light." },
-      { category: "Seasonal", label: "4th of July: Summer Porch", text: "Staged on a sunny Americana front porch in summer with classic wooden rocking chairs, subtle patriotic accents, and bright golden hour sunlight." },
-
+      // Crosses
+      {
+        category: "Crosses",
+        label: "Cross: White Shiplap Entry",
+        text: "Mounted floating slightly off a bright white farmhouse shiplap entryway wall, casting a soft realistic 3D shadow behind it. Warm natural morning light and a wood console table with eucalyptus greenery below."
+      },
+      {
+        category: "Crosses",
+        label: "Cross: Sunlit Living Room",
+        text: "Mounted floating on a warm cream plaster living room wall with soft afternoon sunlight streaming across the wall, highlighting the wood grain and creating a crisp floating shadow."
+      },
+      {
+        category: "Crosses",
+        label: "Cross: Rustic Stone Accent",
+        text: "Mounted floating on a natural rustic stone accent wall in a cozy family room with warm recessed downlighting emphasizing the craftsmanship and 3D floating depth."
+      },
+      {
+        category: "Crosses",
+        label: "Cross: Cozy Bedroom Wall",
+        text: "Mounted floating on a calm, neutral taupe bedroom wall above a wooden headboard with soft natural window light and cozy linen bedding."
+      },
+      // Seasonal
+      {
+        category: "Seasonal",
+        label: "Fall: Farmhouse Porch",
+        text: "Staged on a welcoming covered farmhouse front porch decorated for Fall, surrounded by pumpkins, mums in rustic planters, and warm autumn afternoon sunlight."
+      },
+      {
+        category: "Seasonal",
+        label: "Fall: Cozy Mantel",
+        text: "Displayed on a rustic wooden fireplace mantel decorated for autumn with eucalyptus, soft orange pumpkins, brass candlesticks, and warm cozy lighting."
+      },
+      {
+        category: "Seasonal",
+        label: "Christmas: Fireplace Mantel",
+        text: "Staged on a cozy fireplace mantel decorated for Christmas with fresh pine garland, warm white twinkling fairy lights, and a glowing fire below."
+      },
+      {
+        category: "Seasonal",
+        label: "Christmas: Winter Entryway",
+        text: "Staged in a festive holiday entryway with a flocked mini Christmas tree, plaid accents, and soft warm indoor lighting."
+      },
+      {
+        category: "Seasonal",
+        label: "Spring: Bright Shelf",
+        text: "Displayed on a bright white farmhouse entryway console table decorated for Spring with fresh tulips in a ceramic pitcher and airy natural daylight."
+      },
+      {
+        category: "Seasonal",
+        label: "Patriotic: Summer Porch",
+        text: "Staged on a charming American front porch in late afternoon summer sunlight with red geraniums, rocking chairs, and classic wood siding."
+      },
       // Living & Wall
-      { category: "Living & Wall", label: "Rustic: Brick Fireplace", text: "Mounted on the wall of a well-lit, rustic living room above a brick fireplace. Cozy lighting." },
-      { category: "Living & Wall", label: "Rustic: Log Cabin", text: "Placed in a rustic log cabin with a grand stone fireplace. Warm fire glowing, dim ambient lighting." },
-      { category: "Living & Wall", label: "Living Room: Modern", text: "Placed in a cozy, modern living room. Bright natural light, neutral color palette, stylish decor." },
-      { category: "Living & Wall", label: "Living Room: Industrial", text: "Placed in an industrial loft living room with exposed red brick walls and large factory windows." },
-
+      {
+        category: "Living & Wall",
+        label: "Rustic: Brick Fireplace",
+        text: "Mounted on the wall of a well-lit, rustic living room above a brick fireplace. Warm, cozy lighting."
+      },
+      {
+        category: "Living & Wall",
+        label: "Rustic: Log Cabin Stone",
+        text: "Mounted above a grand stone fireplace inside a rustic log cabin. Warm fire glowing, rich wood beams, cozy ambient lighting."
+      },
+      {
+        category: "Living & Wall",
+        label: "Living Room: Modern Bright",
+        text: "Displayed in a bright, modern living room with neutral sofa, natural window light, and clean stylish decor."
+      },
+      {
+        category: "Living & Wall",
+        label: "Living Room: Industrial Loft",
+        text: "Mounted on an exposed red brick wall in an industrial loft living room with large factory windows and leather furniture."
+      },
       // Kitchen & Dining
-      { category: "Kitchen & Dining", label: "Kitchen: Farmhouse", text: "Placed in a modern farmhouse kitchen with bright natural light, white marble countertops, and rustic accents." },
-      { category: "Kitchen & Dining", label: "Dining: Elegant", text: "Placed in an elegant dining room with a large wooden table, ambient chandelier lighting, and a cozy atmosphere." },
-
+      {
+        category: "Kitchen & Dining",
+        label: "Kitchen: Farmhouse Counter",
+        text: "Placed on a bright white marble countertop in a modern farmhouse kitchen with natural daylight, warm wood cabinets, and subtle culinary accents."
+      },
+      {
+        category: "Kitchen & Dining",
+        label: "Dining: Rustic Table",
+        text: "Displayed as a centerpiece in a warm, inviting dining room on a solid oak table with soft chandelier lighting."
+      },
       // Man Cave & Patio
-      { category: "Man Cave & Patio", label: "Man Cave: Upscale", text: "Placed in a moody, upscale man cave with warm amber accent lighting and dark wood finishes." },
-      { category: "Man Cave & Patio", label: "Man Cave: Home Bar", text: "Displayed behind a custom wood home bar with warm pendant lights, leather stools, and sports memorabilia." },
-      { category: "Man Cave & Patio", label: "Patio: Outdoor BBQ", text: "Placed in a beautiful backyard patio next to an outdoor BBQ kitchen setup. Bright summer afternoon lighting." },
-      { category: "Man Cave & Patio", label: "Patio: Twilight Deck", text: "Displayed on a covered cedar patio deck at twilight with warm Edison string lights glowing softly." }
+      {
+        category: "Man Cave & Patio",
+        label: "Man Cave: Upscale Lounge",
+        text: "Mounted in a moody, upscale man cave with dark wood paneling, leather seating, and warm amber accent lighting."
+      },
+      {
+        category: "Man Cave & Patio",
+        label: "Man Cave: Home Bar",
+        text: "Displayed behind a custom rustic wood home bar with warm Edison bulb lighting and dark slate accents."
+      },
+      {
+        category: "Man Cave & Patio",
+        label: "Patio: Outdoor BBQ",
+        text: "Staged on a covered backyard patio next to a stone outdoor BBQ kitchen setup in warm late afternoon sunlight."
+      },
+      {
+        category: "Man Cave & Patio",
+        label: "Patio: Twilight Firepit",
+        text: "Staged on a cozy covered outdoor patio at twilight with warm string lights glowing overhead and a stone firepit nearby."
+      }
     ];
 
     /* =========================================================================
-       MAIN APPLICATION COMPONENT
+       MAIN APP COMPONENT
        ========================================================================= */
     const App = () => {
-      // --- API Key & Model State (Stored locally in browser only) ---
-      const [apiKey, setApiKey] = useState(() => extractHashApiKey() || loadPersistent(STORAGE_KEY_API) || "");
-      const [imageModel, setImageModel] = useState(() => loadPersistent(STORAGE_KEY_MODEL) || DEFAULT_IMAGE_MODEL);
-      const [storageBlocked, setStorageBlocked] = useState(() => !checkStorageAvailable());
+      // --- API Key & Settings State ---
+      const [apiKey, setApiKey] = useState(() => {
+        const fromHash = extractHashApiKey();
+        return fromHash || loadPersistent(STORAGE_KEY_API);
+      });
+      const [imageModel, setImageModel] = useState(
+        () => loadPersistent(STORAGE_KEY_MODEL) || DEFAULT_IMAGE_MODEL
+      );
       const [showSettingsModal, setShowSettingsModal] = useState(false);
       const [tempKey, setTempKey] = useState("");
       const [tempModel, setTempModel] = useState(DEFAULT_IMAGE_MODEL);
       const [showKeyText, setShowKeyText] = useState(false);
+      const [storageBlocked, setStorageBlocked] = useState(false);
+      const [toastMsg, setToastMsg] = useState("");
 
       // --- Core Staging State ---
+      const [selectedCategory, setSelectedCategory] = useState("flag");
       const [selectedImage, setSelectedImage] = useState(null);
       const [base64Data, setBase64Data] = useState(null);
       const [mimeType, setMimeType] = useState(null);
       const [projectType, setProjectType] = useState("Wood Wavy American Flag");
       const [projectSize, setProjectSize] = useState('36" x 19.5"');
-      const [placementStyle, setPlacementStyle] = useState("Auto (Based on Scene)");
-      const [activePresetCategory, setActivePresetCategory] = useState("All");
+      const [placementStyle, setPlacementStyle] = useState("Wall Mounted / Floating");
+      const [activePresetCategory, setActivePresetCategory] = useState("Living & Wall");
       const [prompt, setPrompt] = useState(
         "Mounted on the wall of a well-lit, rustic living room above a brick fireplace. The lighting should be realistic, cozy, and high quality."
       );
@@ -430,7 +579,7 @@
       const [error, setError] = useState(null);
       const fileInputRef = useRef(null);
 
-      // --- Enhancement & UI State ---
+      // --- Enhancement States ---
       const [isDragging, setIsDragging] = useState(false);
       const [aspectRatio, setAspectRatio] = useState("1:1");
       const [frameStyle, setFrameStyle] = useState("None");
@@ -441,91 +590,90 @@
       const [queue, setQueue] = useState([]);
       const [aiSuggestions, setAiSuggestions] = useState([]);
       const [isAnalyzing, setIsAnalyzing] = useState(false);
-      const [statusToast, setStatusToast] = useState(null);
-      const toastTimeoutRef = useRef(null);
 
-      // Show a temporary status toast notification
+      useEffect(() => {
+        setStorageBlocked(!checkStorageAvailable());
+      }, []);
+
+      // Brief non-blocking toast notification
       const notify = (msg) => {
-        setStatusToast(msg);
-        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-        toastTimeoutRef.current = setTimeout(() => setStatusToast(null), 3500);
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(""), 3200);
       };
 
-      // Open the private API Key & Model settings modal
+      // Switch main item category at Step 1 and apply tailored defaults
+      const handleSelectCategory = (cat) => {
+        setSelectedCategory(cat.id);
+        setProjectType(cat.defaultType);
+        setProjectSize(cat.defaultSize);
+        setPlacementStyle(cat.defaultPlacement);
+        setActivePresetCategory(cat.presetCategory);
+        setPrompt(cat.defaultPrompt);
+      };
+
+      // Settings modal handlers
       const openSettings = () => {
         setTempKey(apiKey);
-        setTempModel(imageModel);
+        setTempModel(imageModel || DEFAULT_IMAGE_MODEL);
         setShowKeyText(false);
         setShowSettingsModal(true);
       };
 
-      // Save API Key & Model to localStorage + Cookie fallback
       const saveSettings = (e) => {
         e.preventDefault();
         const cleanedKey = tempKey.trim();
         const cleanedModel = tempModel.trim() || DEFAULT_IMAGE_MODEL;
-
         setApiKey(cleanedKey);
         setImageModel(cleanedModel);
-
         if (cleanedKey) {
-          const persisted = savePersistent(STORAGE_KEY_API, cleanedKey);
-          setStorageBlocked(!persisted);
-          notify(
-            persisted
-              ? "API key saved privately on this device."
-              : "Key active for this session (browser is blocking permanent storage)."
-          );
+          const saved = savePersistent(STORAGE_KEY_API, cleanedKey);
+          savePersistent(STORAGE_KEY_MODEL, cleanedModel);
+          setStorageBlocked(!saved);
+          notify(saved ? "API key saved on this device!" : "Key active for now (storage blocked by browser).");
         } else {
           removePersistent(STORAGE_KEY_API);
-          notify("API key cleared from this device.");
+          notify("API key cleared.");
         }
-        savePersistent(STORAGE_KEY_MODEL, cleanedModel);
         setShowSettingsModal(false);
         setError(null);
       };
 
       const clearApiKey = () => {
-        setTempKey("");
         setApiKey("");
+        setTempKey("");
         removePersistent(STORAGE_KEY_API);
         notify("API key removed from this device.");
       };
 
-      // Copy a private auto-login bookmark link (#key=... stays strictly in the browser)
       const copyBookmarkLink = () => {
         const keyToUse = (tempKey || apiKey).trim();
         if (!keyToUse) return;
-        const baseUrl = window.location.href.split("#")[0];
-        const bookmarkUrl = `${baseUrl}#key=${encodeURIComponent(keyToUse)}`;
-
-        const tempInput = document.createElement("textarea");
-        tempInput.value = bookmarkUrl;
-        tempInput.style.position = "fixed";
-        tempInput.style.opacity = "0";
-        document.body.appendChild(tempInput);
-        tempInput.select();
+        const baseUrl = window.location.origin + window.location.pathname;
+        const link = `${baseUrl}#key=${encodeURIComponent(keyToUse)}`;
+        const textarea = document.createElement("textarea");
+        textarea.value = link;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
         try {
           document.execCommand("copy");
-          notify("Private bookmark link copied! Save it to your bookmarks.");
+          notify("Private auto-login bookmark link copied!");
         } catch (err) {
-          notify("Could not copy automatically. Please copy from settings.");
+          notify("Could not copy automatically. Try saving in regular Safari/Chrome.");
         }
-        document.body.removeChild(tempInput);
+        document.body.removeChild(textarea);
       };
 
-      // --- AI Visual Analysis for Smart Staging Suggestions ---
-      const getAiSuggestions = async (base64, mime, keyOverride = null) => {
-        const activeKey = keyOverride || apiKey;
-        if (!activeKey) return;
-
+      // Analyze uploaded image with Gemini 3 Flash for smart staging suggestions
+      const getAiSuggestions = async (base64, mime) => {
+        if (!apiKey) return;
         setIsAnalyzing(true);
         setAiSuggestions([]);
         try {
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${SUGGESTION_MODEL}:generateContent?key=${encodeURIComponent(activeKey)}`;
-
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${SUGGESTION_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
           const aiPrompt =
-            "Analyze this handcrafted woodworking item (such as a wood flag, floating wooden cross, seasonal holiday decor, porch sign, or cutting board). Create 3 highly descriptive staging environment prompts suitable for a Facebook Marketplace listing. Match the season, style, and natural placement (wall-mounted with floating shadow, mantel, tabletop, or front porch) of the item. Return ONLY a JSON object with a single property 'prompts' containing an array of 3 strings. Each string should be a full descriptive prompt.";
+            `Analyze this handcrafted ${projectType} in the photo. Create 3 highly descriptive staging environment prompts suitable for a Facebook Marketplace listing. Match the season, style, and natural placement (${placementStyle}) of the item. Return ONLY a JSON object with a single property 'prompts' containing an array of 3 strings. Each string should be a full descriptive prompt.`;
 
           const payload = {
             contents: [
@@ -572,7 +720,7 @@
         }
       };
 
-      // --- File Processing & Drag/Drop ---
+      // Process uploaded file into base64
       const processFile = (file) => {
         if (!file) return;
         setSelectedImage(URL.createObjectURL(file));
@@ -588,11 +736,9 @@
           if (match) {
             setMimeType(match[1]);
             setBase64Data(match[2]);
-            if (apiKey) {
-              getAiSuggestions(match[2], match[1]);
-            }
+            getAiSuggestions(match[2], match[1]);
           } else {
-            setError("Failed to process image format. Please use JPG, PNG, or WEBP.");
+            setError("Failed to process image format. Please use PNG, JPG, or WEBP.");
           }
         };
         reader.readAsDataURL(file);
@@ -628,10 +774,10 @@
         }
       };
 
-      // --- Image Generation via Gemini (Nano Banana) ---
+      // Generate staged image using Nano Banana (Gemini image model)
       const handleGenerate = async () => {
         if (!apiKey) {
-          setError("Please add your Google AI Studio API key first.");
+          setError("Please add your Gemini API key first (tap 'Set API Key' at the top right).");
           openSettings();
           return;
         }
@@ -650,30 +796,26 @@
         setShowSlider(false);
 
         try {
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-            imageModel
-          )}:generateContent?key=${encodeURIComponent(apiKey)}`;
+          const activeModel = (imageModel || DEFAULT_IMAGE_MODEL).trim();
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+          const placementRule =
+            PLACEMENT_OPTIONS.find((p) => p.value === placementStyle)?.instruction ||
+            PLACEMENT_OPTIONS[0].instruction;
 
           let finalPrompt = `Take the provided image of the ${projectType} and perfectly integrate it into the following scene: ${prompt}. The physical dimensions of this item are approximately ${projectSize}. `;
 
-          if (placementStyle === "Wall Mounted / Floating") {
-            finalPrompt += `Mount the item securely on the wall; if it is a floating cross or 3D wall piece, cast a realistic soft drop-shadow behind it so it visibly stands out from the wall. `;
-          } else if (placementStyle === "Tabletop / Mantel / Shelf") {
-            finalPrompt += `Rest the item naturally on a flat tabletop, mantel, counter, or shelf with accurate grounded contact shadows. `;
-          } else if (placementStyle === "Front Porch / Floor Standing") {
-            finalPrompt += `Place the item resting naturally on the floor or leaning securely against the wall on a porch with realistic grounded shadows. `;
-          }
-
           if (frameStyle !== "None") {
-            finalPrompt += `The item should have a beautiful ${frameStyle} frame around it. `;
+            finalPrompt += `The item should have a clean, realistic ${frameStyle} frame around it. `;
           }
 
           finalPrompt += `
 CRITICAL INSTRUCTIONS:
-- Automatically remove the original background from the provided image before placing it in the scene. Only the item itself should be placed.
-- Ensure the item is scaled realistically relative to the furniture, walls, and overall room size in the generated environment.
-- Ensure the item looks natural in the environment with correct shadows, lighting, and perspective.
-- DO NOT alter the wood grain, do NOT change specific details of the item, and DO NOT warp or distort the project itself. Preserve the original craftsmanship exactly.`;
+- Automatically remove the original workbench, floor, or room background from the provided photo so ONLY the handcrafted wooden project itself is placed into the new scene.
+- PLACEMENT: ${placementRule}
+- Ensure the item is scaled realistically relative to the furniture, walls, mantels, porch elements, and overall room size.
+- Match realistic shadows, ambient reflections, lighting direction, and perspective.
+- DO NOT alter the wood grain, paint/stain colors, carvings, stars/stripes, or exact shape of the handcrafted item. Preserve the original craftsmanship faithfully.`;
 
           const payload = {
             contents: [
@@ -705,15 +847,10 @@ CRITICAL INSTRUCTIONS:
           const result = await response.json();
 
           if (!response.ok) {
-            throw new Error(
-              result.error?.message || "Failed to generate image. Double-check your API key and model name."
-            );
+            throw new Error(result.error?.message || "Failed to generate image from Gemini API.");
           }
 
-          const generatedPart = result?.candidates?.[0]?.content?.parts?.find(
-            (p) => p.inlineData
-          );
-
+          const generatedPart = result?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
           if (generatedPart) {
             const generatedImageUrl = `data:${generatedPart.inlineData.mimeType};base64,${generatedPart.inlineData.data}`;
             setResultImage(generatedImageUrl);
@@ -728,10 +865,10 @@ CRITICAL INSTRUCTIONS:
                   time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 },
                 ...prev
-              ].slice(0, 10)
+              ].slice(0, 12)
             );
           } else {
-            throw new Error("No image data found in the API response. Try adjusting your prompt.");
+            throw new Error("No image data was returned by the model. Try adjusting the prompt or model name in API Settings.");
           }
         } catch (err) {
           console.error(err);
@@ -749,7 +886,7 @@ CRITICAL INSTRUCTIONS:
         }
       };
 
-      // --- Watermark + iPhone Share Sheet / Desktop Download ---
+      // Bake watermark onto canvas & trigger iOS Share Sheet (or desktop download)
       const handleDownload = (imgUrl = resultImage) => {
         if (!imgUrl) return;
 
@@ -787,7 +924,6 @@ CRITICAL INSTRUCTIONS:
               document.body.removeChild(a);
             };
 
-            // iOS / Mobile Native Share Sheet
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               try {
                 await navigator.share({
@@ -809,78 +945,101 @@ CRITICAL INSTRUCTIONS:
 
       return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12">
+          {/* Toast Notification */}
+          {toastMsg && (
+            <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-xl border border-slate-700">
+              {toastMsg}
+            </div>
+          )}
+
           {/* Top Navigation Bar */}
-          <nav className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200/80">
+          <nav className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
             <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
                   <SparklesIcon size={20} />
                 </div>
                 <div>
-                  <span className="font-extrabold text-lg tracking-tight text-slate-900">
+                  <div className="font-extrabold text-base sm:text-lg leading-tight text-slate-900">
                     Stager <span className="text-blue-600">App</span>
-                  </span>
-                  <span className="hidden sm:inline-block ml-2 text-xs font-medium text-slate-400">
+                  </div>
+                  <div className="text-[11px] font-medium text-slate-500 leading-tight">
                     JRG Custom Builds
-                  </span>
+                  </div>
                 </div>
               </div>
 
               <button
                 onClick={openSettings}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border ${
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border ${
                   apiKey
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                     : "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 animate-pulse"
                 }`}
               >
-                <KeyIcon size={16} />
-                {apiKey ? "API Key Connected" : "Set API Key"}
+                <KeyIcon size={15} />
+                <span>{apiKey ? "API Key Connected" : "Set API Key"}</span>
               </button>
             </div>
           </nav>
 
-          {/* Status Toast */}
-          {statusToast && (
-            <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-xl flex items-center gap-2">
-              <CheckCircleIcon size={16} className="text-emerald-400" />
-              {statusToast}
-            </div>
-          )}
-
-          <div className="max-w-5xl mx-auto px-4 md:px-6 pt-6 space-y-6">
-            {/* API Key Setup Banner (shown only when key is missing) */}
-            {!apiKey && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <KeyIcon size={20} className="text-amber-600 shrink-0 mt-0.5" />
-                  <div className="text-sm text-amber-900">
-                    <p className="font-bold">Connect your Gemini API Key to get started</p>
-                    <p className="text-amber-800/90 mt-0.5">
-                      Your key is stored <strong>only on this device</strong> (never uploaded to GitHub).
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={openSettings}
-                  className="shrink-0 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl transition-colors"
-                >
-                  Add API Key
-                </button>
-              </div>
-            )}
+          <div className="max-w-5xl mx-auto px-4 pt-6 md:pt-8 space-y-8">
+            {/* Compact Header */}
+            <header className="text-center space-y-2">
+              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+                Stage Your Woodworking Projects
+              </h1>
+              <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
+                Pick what you're staging, upload your raw shop photo, and let Nano Banana create scroll-stopping Facebook Marketplace photos.
+              </p>
+            </header>
 
             {/* Main Workspace */}
             <main className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden flex flex-col lg:flex-row">
               {/* Left Column: Controls */}
               <div className="flex-1 p-5 md:p-8 border-b lg:border-b-0 lg:border-r border-slate-100 space-y-7">
-                {/* Step 1: Upload */}
+                {/* Step 1: Choose What You Are Staging */}
                 <div className="space-y-3">
                   <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
                       1
                     </span>
-                    Upload Your Project
+                    What Are You Staging?
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {STAGE_CATEGORIES.map((cat) => {
+                      const isActive = selectedCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => handleSelectCategory(cat)}
+                          className={`p-3 rounded-2xl border-2 text-left transition-all flex flex-col gap-1 ${
+                            isActive
+                              ? "border-blue-600 bg-blue-50/80 shadow-sm ring-2 ring-blue-500/20"
+                              : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className="text-xl leading-none">{cat.badge}</span>
+                          <span className={`text-sm font-bold leading-tight mt-1 ${isActive ? "text-blue-900" : "text-slate-800"}`}>
+                            {cat.title}
+                          </span>
+                          <span className="text-[11px] text-slate-500 leading-tight">
+                            {cat.subtitle}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Step 2: Upload */}
+                <div className="space-y-3">
+                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
+                      2
+                    </span>
+                    Upload Your {STAGE_CATEGORIES.find((c) => c.id === selectedCategory)?.title || "Project"}
                   </h2>
                   <div
                     onClick={() => fileInputRef.current?.click()}
@@ -912,24 +1071,26 @@ CRITICAL INSTRUCTIONS:
                           className="max-h-48 mx-auto rounded-xl shadow-sm object-contain"
                         />
                         <div className="flex items-center justify-center gap-1.5 text-blue-700 font-semibold text-sm">
-                          <CheckCircleIcon size={17} /> Image Ready
+                          <CheckCircleIcon size={17} /> Image Selected
                         </div>
                         {queue.length > 0 && (
                           <p className="text-xs font-bold text-amber-800 bg-amber-100 px-3 py-1 rounded-full inline-block">
-                            +{queue.length} more item{queue.length > 1 ? "s" : ""} in queue
+                            +{queue.length} more in batch queue
                           </p>
                         )}
                         <p className="text-xs text-slate-500">Tap or drag to change photo(s)</p>
                       </div>
                     ) : (
-                      <div className="space-y-3 py-5 pointer-events-none">
+                      <div className="space-y-3 py-4 pointer-events-none">
                         <div className="mx-auto w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
-                          <UploadCloudIcon size={28} className={isDragging ? "text-blue-600" : ""} />
+                          <UploadCloudIcon size={28} className={isDragging ? "text-blue-500" : ""} />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-700">Tap or drag to upload photo(s)</p>
+                          <p className="font-semibold text-slate-700 text-sm sm:text-base">
+                            Tap or drag to upload photo(s)
+                          </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            JPG, PNG, or WEBP • Select multiple for batch queue
+                            PNG, JPG, or WEBP. Select multiple for batch queue.
                           </p>
                         </div>
                       </div>
@@ -937,19 +1098,19 @@ CRITICAL INSTRUCTIONS:
                   </div>
                 </div>
 
-                {/* Step 2: Settings */}
+                {/* Step 3: Details & Settings */}
                 <div className="space-y-3">
                   <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
-                      2
+                      3
                     </span>
-                    Project & Image Settings
+                    Details & Image Settings
                   </h2>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                        <SparklesIcon size={14} /> Project Type
+                        <SparklesIcon size={14} /> Specific Project Name
                       </label>
                       <input
                         type="text"
@@ -958,26 +1119,55 @@ CRITICAL INSTRUCTIONS:
                         placeholder="e.g., Floating Wooden Cross, Fall Decor, Wavy Flag"
                         className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800"
                       />
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {QUICK_PROJECT_TYPES.map((item) => (
-                          <button
-                            key={item.label}
-                            type="button"
-                            onClick={() => {
-                              setProjectType(item.label);
-                              setProjectSize(item.size);
-                              setPlacementStyle(item.placement);
-                            }}
-                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                              projectType === item.label
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
-                            }`}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
+                      {selectedCategory === "seasonal" && (
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {[
+                            { label: "Fall / Autumn Decor", size: '18" x 14"', placement: "Tabletop / Mantel / Shelf" },
+                            { label: "Christmas / Holiday Decor", size: '20" x 16"', placement: "Tabletop / Mantel / Shelf" },
+                            { label: "Spring Farmhouse Decor", size: '16" x 12"', placement: "Tabletop / Mantel / Shelf" },
+                            { label: "Porch Leaner Sign", size: '48" x 10"', placement: "Front Porch / Floor Standing" }
+                          ].map((item) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => {
+                                setProjectType(item.label);
+                                setProjectSize(item.size);
+                                setPlacementStyle(item.placement);
+                              }}
+                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                                projectType === item.label
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {selectedCategory === "other" && (
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {QUICK_PROJECT_TYPES.slice(4).map((item) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => {
+                                setProjectType(item.label);
+                                setProjectSize(item.size);
+                                setPlacementStyle(item.placement);
+                              }}
+                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                                projectType === item.label
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-1">
@@ -988,7 +1178,7 @@ CRITICAL INSTRUCTIONS:
                         type="text"
                         value={projectSize}
                         onChange={(e) => setProjectSize(e.target.value)}
-                        placeholder='e.g., 36" x 19.5" or 24" x 15"'
+                        placeholder='e.g., 36" x 19.5"'
                         className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800"
                       />
                     </div>
@@ -1003,8 +1193,8 @@ CRITICAL INSTRUCTIONS:
                         className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 bg-white"
                       >
                         {PLACEMENT_OPTIONS.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
+                          <option key={opt.value} value={opt.value}>
+                            {opt.value}
                           </option>
                         ))}
                       </select>
@@ -1019,10 +1209,10 @@ CRITICAL INSTRUCTIONS:
                         onChange={(e) => setAspectRatio(e.target.value)}
                         className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 bg-white"
                       >
-                        <option value="1:1">Square (1:1) - Best for FB</option>
+                        <option value="1:1">Square (1:1) — Best for FB</option>
                         <option value="4:3">Standard (4:3)</option>
                         <option value="16:9">Widescreen (16:9)</option>
-                        <option value="9:16">Vertical (9:16) - Stories</option>
+                        <option value="9:16">Vertical (9:16) — Stories</option>
                         <option value="3:4">Portrait (3:4)</option>
                       </select>
                     </div>
@@ -1059,11 +1249,11 @@ CRITICAL INSTRUCTIONS:
                   </div>
                 </div>
 
-                {/* Step 3: Staging Environment */}
+                {/* Step 4: Staging Environment */}
                 <div className="space-y-3">
                   <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
-                      3
+                      4
                     </span>
                     Choose Staging Environment
                   </h2>
