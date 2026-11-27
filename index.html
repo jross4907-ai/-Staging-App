@@ -672,8 +672,16 @@
         setAiSuggestions([]);
         try {
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${SUGGESTION_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
-          const aiPrompt =
-            `Analyze this handcrafted ${projectType} in the photo. Create 3 highly descriptive staging environment prompts suitable for a Facebook Marketplace listing. Match the season, style, and natural placement (${placementStyle}) of the item. Return ONLY a JSON object with a single property 'prompts' containing an array of 3 strings. Each string should be a full descriptive prompt.`;
+          const isStandingCross =
+            selectedCategory === "cross" ||
+            /cross/i.test(projectType) ||
+            placementStyle === "Tabletop / Mantel / Shelf";
+
+          const placementConstraint = isStandingCross
+            ? "CRITICAL: This piece is FREE-STANDING and rests upright on its own base on a flat surface (such as a fireplace mantel, entryway console table, bookshelf, dresser, or nightstand). NEVER suggest mounting, hanging, or floating it on a wall, and make sure the engraved Bible verse on the base remains clearly visible."
+            : `Match the season, style, and natural placement (${placementStyle}) of the item.`;
+
+          const aiPrompt = `Analyze this handcrafted ${projectType} in the photo. Create 3 highly descriptive staging environment prompts suitable for a Facebook Marketplace listing. ${placementConstraint} Return ONLY a JSON object with a single property 'prompts' containing an array of 3 strings. Each string should be a full descriptive prompt.`;
 
           const payload = {
             contents: [
@@ -709,7 +717,7 @@
           const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (jsonText) {
             const parsed = JSON.parse(jsonText);
-            if (Array.isArray(parsed.prompts)) {
+            if (parsed.prompts && Array.isArray(parsed.prompts)) {
               setAiSuggestions(parsed.prompts);
             }
           }
@@ -720,7 +728,6 @@
         }
       };
 
-      // Process uploaded file into base64
       const processFile = (file) => {
         if (!file) return;
         setSelectedImage(URL.createObjectURL(file));
@@ -738,7 +745,7 @@
             setBase64Data(match[2]);
             getAiSuggestions(match[2], match[1]);
           } else {
-            setError("Failed to process image format. Please use PNG, JPG, or WEBP.");
+            setError("Failed to process image format. Please use JPG, PNG, or WEBP.");
           }
         };
         reader.readAsDataURL(file);
@@ -774,19 +781,19 @@
         }
       };
 
-      // Generate staged image using Nano Banana (Gemini image model)
+      // Generate staged image using Nano Banana (Gemini 3.1 Flash Image)
       const handleGenerate = async () => {
         if (!apiKey) {
-          setError("Please add your Gemini API key first (tap 'Set API Key' at the top right).");
+          setError("Please add your Gemini API key first (tap 'Set API Key' in the top right).");
           openSettings();
           return;
         }
         if (!base64Data || !mimeType) {
-          setError("Please upload an image first.");
+          setError("Please upload a photo of your project first.");
           return;
         }
         if (!prompt.trim()) {
-          setError("Please enter a staging description.");
+          setError("Please choose or enter a staging environment description.");
           return;
         }
 
@@ -796,12 +803,17 @@
         setShowSlider(false);
 
         try {
-          const activeModel = (imageModel || DEFAULT_IMAGE_MODEL).trim();
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+          const modelToUse = imageModel || DEFAULT_IMAGE_MODEL;
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelToUse)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
           const placementRule =
             PLACEMENT_OPTIONS.find((p) => p.value === placementStyle)?.instruction ||
             PLACEMENT_OPTIONS[0].instruction;
+
+          const isStandingCross =
+            selectedCategory === "cross" ||
+            /cross/i.test(projectType) ||
+            placementStyle === "Tabletop / Mantel / Shelf";
 
           let finalPrompt = `Take the provided image of the ${projectType} and perfectly integrate it into the following scene: ${prompt}. The physical dimensions of this item are approximately ${projectSize}. `;
 
@@ -813,6 +825,7 @@
 CRITICAL INSTRUCTIONS:
 - Automatically remove the original workbench, floor, or room background from the provided photo so ONLY the handcrafted wooden project itself (including its standing base if present) is placed into the new scene.
 - PLACEMENT: ${placementRule}
+${isStandingCross ? "- STRICT STANDING RULE: This item stands upright on its flat wooden base resting directly on a horizontal surface (table, mantel, shelf, or counter). NEVER mount, hang, attach, or float it on a vertical wall." : ""}
 - Ensure the item is scaled realistically relative to the furniture, walls, mantels, porch elements, and overall room size.
 - Match realistic shadows, ambient reflections, lighting direction, and perspective.
 - DO NOT alter the wood grain, paint/stain colors, carvings, engraved Bible verses or lettering on the base, stars/stripes, or exact shape of the handcrafted item. Preserve the original craftsmanship and text faithfully.`;
@@ -847,10 +860,15 @@ CRITICAL INSTRUCTIONS:
           const result = await response.json();
 
           if (!response.ok) {
-            throw new Error(result.error?.message || "Failed to generate image from Gemini API.");
+            throw new Error(
+              result.error?.message ||
+                "Failed to generate image. Double-check your Gemini API key and billing in Google AI Studio."
+            );
           }
 
-          const generatedPart = result?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
+          const generatedPart = result?.candidates?.[0]?.content?.parts?.find(
+            (p) => p.inlineData
+          );
           if (generatedPart) {
             const generatedImageUrl = `data:${generatedPart.inlineData.mimeType};base64,${generatedPart.inlineData.data}`;
             setResultImage(generatedImageUrl);
@@ -862,13 +880,14 @@ CRITICAL INSTRUCTIONS:
                   original: selectedImage,
                   staged: generatedImageUrl,
                   prompt: prompt,
+                  projectType: projectType,
                   time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 },
                 ...prev
               ].slice(0, 12)
             );
           } else {
-            throw new Error("No image data was returned by the model. Try adjusting the prompt or model name in API Settings.");
+            throw new Error("No image was returned by the model. Try adjusting your prompt and generating again.");
           }
         } catch (err) {
           console.error(err);
@@ -886,7 +905,7 @@ CRITICAL INSTRUCTIONS:
         }
       };
 
-      // Bake watermark onto canvas & trigger iOS Share Sheet (or desktop download)
+      // Apply watermark & use Native Web Share on iPhone / download on Desktop
       const handleDownload = (imgUrl = resultImage) => {
         if (!imgUrl) return;
 
@@ -900,19 +919,25 @@ CRITICAL INSTRUCTIONS:
           canvas.height = img.height;
           ctx.drawImage(img, 0, 0);
 
-          if (watermarkText.trim()) {
-            const fontSize = Math.max(24, Math.round(canvas.height * 0.035));
+          if (watermarkText && watermarkText.trim()) {
+            const fontSize = Math.max(22, Math.round(canvas.height * 0.032));
             ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-            ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
             ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
             ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 2;
             ctx.textAlign = "right";
-            ctx.fillText(watermarkText.trim(), canvas.width - 30, canvas.height - 30);
+            ctx.fillText(watermarkText.trim(), canvas.width - 28, canvas.height - 28);
           }
 
           canvas.toBlob(async (blob) => {
             if (!blob) return;
-            const fileName = `jrg-staged-${Date.now()}.png`;
+            const slug = projectType
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/(^-|-$)/g, "") || "project";
+            const fileName = `jrg-staged-${slug}-${Date.now()}.png`;
             const file = new File([blob], fileName, { type: "image/png" });
 
             const fallbackDownload = () => {
@@ -922,13 +947,14 @@ CRITICAL INSTRUCTIONS:
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
+              notify("Image downloaded!");
             };
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               try {
                 await navigator.share({
                   files: [file],
-                  title: "Staged Project — JRG Custom Builds"
+                  title: "Staged Woodworking Project"
                 });
               } catch (err) {
                 if (err.name !== "AbortError") {
@@ -943,104 +969,127 @@ CRITICAL INSTRUCTIONS:
         img.src = imgUrl;
       };
 
+      const filteredPresets =
+        activePresetCategory === "All"
+          ? PRESET_PROMPTS
+          : PRESET_PROMPTS.filter((p) => p.category === activePresetCategory);
+
       return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12">
-          {/* Toast Notification */}
-          {toastMsg && (
-            <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-xl border border-slate-700">
-              {toastMsg}
-            </div>
-          )}
-
           {/* Top Navigation Bar */}
-          <nav className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
-            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <nav className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3">
+            <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
                   <SparklesIcon size={20} />
                 </div>
                 <div>
-                  <div className="font-extrabold text-base sm:text-lg leading-tight text-slate-900">
+                  <div className="font-extrabold text-base md:text-lg leading-tight tracking-tight text-slate-900">
                     Stager <span className="text-blue-600">App</span>
                   </div>
-                  <div className="text-[11px] font-medium text-slate-500 leading-tight">
-                    JRG Custom Builds
-                  </div>
+                  <div className="text-[11px] font-medium text-slate-500">JRG Custom Builds</div>
                 </div>
               </div>
 
               <button
                 onClick={openSettings}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border ${
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold border transition-all ${
                   apiKey
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                     : "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 animate-pulse"
                 }`}
               >
                 <KeyIcon size={15} />
-                <span>{apiKey ? "API Key Connected" : "Set API Key"}</span>
+                {apiKey ? "API Key Connected" : "Set API Key"}
               </button>
             </div>
           </nav>
 
-          <div className="max-w-5xl mx-auto px-4 pt-6 md:pt-8 space-y-8">
-            {/* Compact Header */}
-            <header className="text-center space-y-2">
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-                Stage Your Woodworking Projects
-              </h1>
-              <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
-                Pick what you're staging, upload your raw shop photo, and let Nano Banana create scroll-stopping Facebook Marketplace photos.
-              </p>
-            </header>
+          {/* Toast Message */}
+          {toastMsg && (
+            <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-xl border border-slate-700 flex items-center gap-2">
+              <CheckCircleIcon size={16} className="text-emerald-400" />
+              {toastMsg}
+            </div>
+          )}
 
-            {/* Main Workspace */}
+          <div className="max-w-5xl mx-auto px-4 pt-6 md:pt-8 space-y-6">
+            {/* API Key Setup Banner when missing */}
+            {!apiKey && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <KeyIcon size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-900">
+                    <p className="font-bold">Connect your Gemini API Key to start staging</p>
+                    <p className="text-amber-800 mt-0.5">
+                      Your key is saved privately on this device only—never shared with GitHub or anyone else.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={openSettings}
+                  className="shrink-0 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  Enter API Key
+                </button>
+              </div>
+            )}
+
+            {/* Main Workspace Card */}
             <main className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden flex flex-col lg:flex-row">
               {/* Left Column: Controls */}
               <div className="flex-1 p-5 md:p-8 border-b lg:border-b-0 lg:border-r border-slate-100 space-y-7">
-                {/* Step 1: Choose What You Are Staging */}
+                {/* STEP 1: Choose What You Are Staging First */}
                 <div className="space-y-3">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                  <h2 className="text-lg md:text-xl font-bold flex items-center gap-2.5">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
                       1
                     </span>
                     What Are You Staging?
                   </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+
+                  <div className="grid grid-cols-2 gap-2.5">
                     {STAGE_CATEGORIES.map((cat) => {
-                      const isActive = selectedCategory === cat.id;
+                      const active = selectedCategory === cat.id;
                       return (
                         <button
                           key={cat.id}
                           type="button"
                           onClick={() => handleSelectCategory(cat)}
-                          className={`p-3 rounded-2xl border-2 text-left transition-all flex flex-col gap-1 ${
-                            isActive
-                              ? "border-blue-600 bg-blue-50/80 shadow-sm ring-2 ring-blue-500/20"
+                          className={`text-left p-3.5 rounded-2xl border-2 transition-all flex items-start gap-3 ${
+                            active
+                              ? "border-blue-600 bg-blue-50/70 shadow-sm"
                               : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
                           }`}
                         >
-                          <span className="text-xl leading-none">{cat.badge}</span>
-                          <span className={`text-sm font-bold leading-tight mt-1 ${isActive ? "text-blue-900" : "text-slate-800"}`}>
-                            {cat.title}
-                          </span>
-                          <span className="text-[11px] text-slate-500 leading-tight">
-                            {cat.subtitle}
-                          </span>
+                          <span className="text-2xl leading-none mt-0.5">{cat.badge}</span>
+                          <div className="min-w-0">
+                            <div
+                              className={`font-bold text-sm ${
+                                active ? "text-blue-900" : "text-slate-800"
+                              }`}
+                            >
+                              {cat.title}
+                            </div>
+                            <div className="text-xs text-slate-500 truncate mt-0.5">
+                              {cat.subtitle}
+                            </div>
+                          </div>
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Step 2: Upload */}
+                {/* STEP 2: Upload Photo */}
                 <div className="space-y-3">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                  <h2 className="text-lg md:text-xl font-bold flex items-center gap-2.5">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
                       2
                     </span>
-                    Upload Your {STAGE_CATEGORIES.find((c) => c.id === selectedCategory)?.title || "Project"}
+                    Upload Project Photo
                   </h2>
+
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={onDragOver}
@@ -1050,7 +1099,7 @@ CRITICAL INSTRUCTIONS:
                       isDragging
                         ? "border-blue-500 bg-blue-100 scale-[1.01]"
                         : selectedImage
-                        ? "border-blue-300 bg-blue-50/70"
+                        ? "border-blue-300 bg-blue-50/60"
                         : "border-slate-300 hover:border-blue-400 hover:bg-slate-50"
                     }`}
                   >
@@ -1071,14 +1120,14 @@ CRITICAL INSTRUCTIONS:
                           className="max-h-48 mx-auto rounded-xl shadow-sm object-contain"
                         />
                         <div className="flex items-center justify-center gap-1.5 text-blue-700 font-semibold text-sm">
-                          <CheckCircleIcon size={17} /> Image Selected
+                          <CheckCircleIcon size={17} /> Photo Ready
                         </div>
                         {queue.length > 0 && (
                           <p className="text-xs font-bold text-amber-800 bg-amber-100 px-3 py-1 rounded-full inline-block">
-                            +{queue.length} more in batch queue
+                            +{queue.length} more item{queue.length > 1 ? "s" : ""} in queue
                           </p>
                         )}
-                        <p className="text-xs text-slate-500">Tap or drag to change photo(s)</p>
+                        <p className="text-xs text-slate-500">Tap or drag to replace photo(s)</p>
                       </div>
                     ) : (
                       <div className="space-y-3 py-4 pointer-events-none">
@@ -1086,11 +1135,11 @@ CRITICAL INSTRUCTIONS:
                           <UploadCloudIcon size={28} className={isDragging ? "text-blue-500" : ""} />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-700 text-sm sm:text-base">
-                            Tap or drag to upload photo(s)
+                          <p className="font-semibold text-slate-700 text-sm md:text-base">
+                            Tap to take or choose photo(s)
                           </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            PNG, JPG, or WEBP. Select multiple for batch queue.
+                            Works with iPhone Camera Roll, JPG, PNG, or WEBP
                           </p>
                         </div>
                       </div>
@@ -1098,99 +1147,74 @@ CRITICAL INSTRUCTIONS:
                   </div>
                 </div>
 
-                {/* Step 3: Details & Settings */}
+                {/* STEP 3: Project Details & Image Settings */}
                 <div className="space-y-3">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                  <h2 className="text-lg md:text-xl font-bold flex items-center gap-2.5">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
                       3
                     </span>
-                    Details & Image Settings
+                    Project & Image Settings
                   </h2>
 
+                  {/* Sub-presets when Seasonal or Other is chosen */}
+                  {(selectedCategory === "seasonal" || selectedCategory === "other") && (
+                    <div className="flex flex-wrap gap-1.5 pb-1">
+                      {QUICK_PROJECT_TYPES.map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => {
+                            setProjectType(item.label);
+                            setProjectSize(item.size);
+                            setPlacementStyle(item.placement);
+                          }}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${
+                            projectType === item.label
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-slate-100 text-slate-600 border-transparent hover:bg-blue-50 hover:text-blue-700"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                        <SparklesIcon size={14} /> Specific Project Name
+                    <div className="flex flex-col gap-1 sm:col-span-2">
+                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                        <SparklesIcon size={13} /> Exact Project Description
                       </label>
                       <input
                         type="text"
                         value={projectType}
                         onChange={(e) => setProjectType(e.target.value)}
-                        placeholder="e.g., Floating Wooden Cross, Fall Decor, Wavy Flag"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800"
+                        placeholder="e.g., Standing Wooden Cross with Engraved Base"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800"
                       />
-                      {selectedCategory === "seasonal" && (
-                        <div className="flex flex-wrap gap-1.5 pt-0.5">
-                          {[
-                            { label: "Fall / Autumn Decor", size: '18" x 14"', placement: "Tabletop / Mantel / Shelf" },
-                            { label: "Christmas / Holiday Decor", size: '20" x 16"', placement: "Tabletop / Mantel / Shelf" },
-                            { label: "Spring Farmhouse Decor", size: '16" x 12"', placement: "Tabletop / Mantel / Shelf" },
-                            { label: "Porch Leaner Sign", size: '48" x 10"', placement: "Front Porch / Floor Standing" }
-                          ].map((item) => (
-                            <button
-                              key={item.label}
-                              type="button"
-                              onClick={() => {
-                                setProjectType(item.label);
-                                setProjectSize(item.size);
-                                setPlacementStyle(item.placement);
-                              }}
-                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                                projectType === item.label
-                                  ? "bg-blue-600 text-white border-blue-600"
-                                  : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
-                              }`}
-                            >
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {selectedCategory === "other" && (
-                        <div className="flex flex-wrap gap-1.5 pt-0.5">
-                          {QUICK_PROJECT_TYPES.slice(4).map((item) => (
-                            <button
-                              key={item.label}
-                              type="button"
-                              onClick={() => {
-                                setProjectType(item.label);
-                                setProjectSize(item.size);
-                                setPlacementStyle(item.placement);
-                              }}
-                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                                projectType === item.label
-                                  ? "bg-blue-600 text-white border-blue-600"
-                                  : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
-                              }`}
-                            >
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                        <LayersIcon size={14} /> Dimensions
+                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                        <LayersIcon size={13} /> Approximate Size
                       </label>
                       <input
                         type="text"
                         value={projectSize}
                         onChange={(e) => setProjectSize(e.target.value)}
                         placeholder='e.g., 36" x 19.5"'
-                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800"
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                        <LayersIcon size={14} /> Placement Style
+                      <label className="text-xs font-semibold text-slate-600">
+                        Placement Style
                       </label>
                       <select
                         value={placementStyle}
                         onChange={(e) => setPlacementStyle(e.target.value)}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 bg-white"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800 bg-white"
                       >
                         {PLACEMENT_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -1201,13 +1225,13 @@ CRITICAL INSTRUCTIONS:
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                        <CropIcon size={14} /> Aspect Ratio
+                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                        <CropIcon size={13} /> Aspect Ratio
                       </label>
                       <select
                         value={aspectRatio}
                         onChange={(e) => setAspectRatio(e.target.value)}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 bg-white"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800 bg-white"
                       >
                         <option value="1:1">Square (1:1) — Best for FB</option>
                         <option value="4:3">Standard (4:3)</option>
@@ -1218,15 +1242,15 @@ CRITICAL INSTRUCTIONS:
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                        <FrameIcon size={14} /> Frame Style
+                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                        <FrameIcon size={13} /> Frame Style
                       </label>
                       <select
                         value={frameStyle}
                         onChange={(e) => setFrameStyle(e.target.value)}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 bg-white"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800 bg-white"
                       >
-                        <option value="None">None (Frameless)</option>
+                        <option value="None">None (As Built)</option>
                         <option value="Charred Wood">Charred Wood</option>
                         <option value="Dark Walnut">Dark Walnut</option>
                         <option value="Black Matte">Black Matte</option>
@@ -1235,41 +1259,41 @@ CRITICAL INSTRUCTIONS:
                     </div>
 
                     <div className="flex flex-col gap-1 sm:col-span-2">
-                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                        <TypeIcon size={14} /> Watermark Text
+                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                        <TypeIcon size={13} /> Watermark Text (Applied on Save)
                       </label>
                       <input
                         type="text"
                         value={watermarkText}
                         onChange={(e) => setWatermarkText(e.target.value)}
-                        placeholder="Your Business Name"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800"
+                        placeholder="JRG Custom Builds"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Step 4: Staging Environment */}
+                {/* STEP 4: Staging Environment */}
                 <div className="space-y-3">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                  <h2 className="text-lg md:text-xl font-bold flex items-center gap-2.5">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">
                       4
                     </span>
                     Choose Staging Environment
                   </h2>
 
-                  {/* Smart AI Suggestions */}
+                  {/* Smart AI Suggestions based on uploaded photo */}
                   {isAnalyzing && (
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-indigo-700 bg-indigo-50 p-3 rounded-xl border border-indigo-200 animate-pulse">
+                    <div className="flex items-center gap-2 text-xs md:text-sm text-indigo-700 bg-indigo-50 p-3 rounded-xl border border-indigo-200 animate-pulse">
                       <SparklesIcon size={16} className="text-indigo-500 shrink-0" />
-                      Analyzing your project for custom staging ideas...
+                      Analyzing your {projectType.toLowerCase()} for custom staging ideas...
                     </div>
                   )}
 
                   {aiSuggestions.length > 0 && !isAnalyzing && (
                     <div className="space-y-2">
                       <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
-                        <LightbulbIcon size={14} /> Smart Suggestions for this item:
+                        <LightbulbIcon size={14} /> Smart Suggestions For Your Photo:
                       </div>
                       <div className="flex flex-col gap-2">
                         {aiSuggestions.map((suggestion, idx) => (
@@ -1277,7 +1301,7 @@ CRITICAL INSTRUCTIONS:
                             key={`ai-${idx}`}
                             type="button"
                             onClick={() => setPrompt(suggestion)}
-                            className="text-left text-xs sm:text-sm font-medium p-3 rounded-xl bg-indigo-50 text-indigo-900 hover:bg-indigo-100 transition-colors border border-indigo-200"
+                            className="text-left text-xs md:text-sm font-medium p-3 rounded-xl bg-indigo-50 text-indigo-950 hover:bg-indigo-100 transition-colors border border-indigo-200"
                           >
                             {suggestion}
                           </button>
@@ -1286,9 +1310,7 @@ CRITICAL INSTRUCTIONS:
                     </div>
                   )}
 
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider pt-1">
-                    Standard Presets:
-                  </div>
+                  {/* Category Tabs */}
                   <div className="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
                     {PRESET_CATEGORIES.map((cat) => (
                       <button
@@ -1297,7 +1319,7 @@ CRITICAL INSTRUCTIONS:
                         onClick={() => setActivePresetCategory(cat)}
                         className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
                           activePresetCategory === cat
-                            ? "bg-slate-900 text-white"
+                            ? "bg-slate-800 text-white"
                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                       >
@@ -1305,15 +1327,19 @@ CRITICAL INSTRUCTIONS:
                       </button>
                     ))}
                   </div>
-                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
-                    {PRESET_PROMPTS.filter(
-                      (p) => activePresetCategory === "All" || p.category === activePresetCategory
-                    ).map((preset, idx) => (
+
+                  {/* Preset Scene Pills */}
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 custom-scrollbar">
+                    {filteredPresets.map((preset, idx) => (
                       <button
-                        key={`${preset.label}-${idx}`}
+                        key={idx}
                         type="button"
                         onClick={() => setPrompt(preset.text)}
-                        className="text-xs font-medium px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700 transition-colors border border-transparent hover:border-blue-200"
+                        className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors border ${
+                          prompt === preset.text
+                            ? "bg-blue-100 text-blue-800 border-blue-300"
+                            : "bg-slate-100 text-slate-700 border-transparent hover:bg-blue-50 hover:text-blue-700"
+                        }`}
                       >
                         {preset.label}
                       </button>
@@ -1323,16 +1349,17 @@ CRITICAL INSTRUCTIONS:
                   <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe where you want the project placed..."
-                    className="w-full h-28 p-3.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-sm text-slate-700 leading-relaxed"
+                    placeholder="Describe where you want your project staged..."
+                    className="w-full h-28 p-3.5 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-sm text-slate-800 leading-relaxed"
                   />
                 </div>
 
                 {/* Generate Button */}
                 <button
+                  type="button"
                   onClick={handleGenerate}
                   disabled={!selectedImage || isGenerating}
-                  className={`w-full py-4 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 transition-all shadow-lg ${
+                  className={`w-full py-4 rounded-2xl font-bold text-base md:text-lg flex items-center justify-center gap-2 transition-all shadow-lg ${
                     !selectedImage || isGenerating
                       ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                       : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-blue-500/30 active:scale-[0.99]"
@@ -1351,9 +1378,9 @@ CRITICAL INSTRUCTIONS:
                   )}
                 </button>
 
-                {/* Error Message */}
+                {/* Error Alert */}
                 {error && (
-                  <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-200 flex items-start gap-3">
+                  <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex items-start gap-3">
                     <AlertCircleIcon className="shrink-0 mt-0.5" size={18} />
                     <p className="text-sm font-medium">{error}</p>
                   </div>
@@ -1365,28 +1392,31 @@ CRITICAL INSTRUCTIONS:
                 {resultImage ? (
                   <div className="flex-1 flex flex-col">
                     <div className="p-4 flex justify-between items-center bg-slate-800 border-b border-slate-700 flex-wrap gap-2">
-                      <h3 className="text-white font-semibold text-sm sm:text-base flex items-center gap-2">
+                      <h3 className="text-white font-semibold text-sm md:text-base flex items-center gap-2">
                         <SparklesIcon className="text-amber-400" size={18} />
                         Staged Result
                       </h3>
-                      <div className="flex items-center flex-wrap gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
+                          type="button"
                           onClick={() => setShowSlider(!showSlider)}
-                          className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs sm:text-sm font-medium transition-colors"
+                          className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs md:text-sm font-medium transition-colors"
                         >
                           {showSlider ? "Hide Compare" : "Before / After"}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDownload(resultImage)}
-                          className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs md:text-sm font-semibold transition-colors shadow-sm"
                         >
                           <DownloadIcon size={16} />
                           Save / Share
                         </button>
                         {queue.length > 0 && (
                           <button
+                            type="button"
                             onClick={processNextInQueue}
-                            className="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors"
+                            className="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs md:text-sm font-semibold transition-colors"
                           >
                             Next ({queue.length})
                           </button>
@@ -1399,7 +1429,7 @@ CRITICAL INSTRUCTIONS:
                         <img
                           src={resultImage}
                           alt="Staged Project Result"
-                          className="max-w-full max-h-[65vh] object-contain block relative z-10"
+                          className="max-w-full max-h-[70vh] object-contain block relative z-10"
                         />
 
                         {showSlider && selectedImage && (
@@ -1412,13 +1442,13 @@ CRITICAL INSTRUCTIONS:
                             >
                               <img
                                 src={selectedImage}
-                                alt="Original Project"
+                                alt="Original Photo"
                                 className="max-w-full max-h-full object-contain p-4"
                               />
                             </div>
 
                             <div
-                              className="absolute top-0 bottom-0 z-30 w-1 bg-white shadow-[0_0_10px_rgba(0,0,0,0.8)] flex items-center justify-center pointer-events-none"
+                              className="absolute top-0 bottom-0 z-30 w-1 bg-white shadow-[0_0_10px_rgba(0,0,0,0.8)] pointer-events-none flex items-center justify-center"
                               style={{ left: `calc(${sliderPosition}% - 2px)` }}
                             >
                               <div className="w-8 h-8 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-xs font-bold border-2 border-white">
@@ -1444,19 +1474,25 @@ CRITICAL INSTRUCTIONS:
                     <div className="w-20 h-20 relative">
                       <div className="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
                       <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
-                      <SparklesIcon className="absolute inset-0 m-auto text-blue-500 animate-pulse" size={28} />
+                      <SparklesIcon className="absolute inset-0 m-auto text-blue-400 animate-pulse" size={28} />
                     </div>
                     <div className="text-center space-y-1.5">
-                      <p className="text-lg font-semibold text-white">Nano Banana is staging your photo...</p>
-                      <p className="text-sm text-slate-400">Matching lighting, shadows, and scale.</p>
+                      <p className="text-base md:text-lg font-semibold text-white">
+                        Nano Banana is staging your {projectType.toLowerCase()}...
+                      </p>
+                      <p className="text-xs md:text-sm text-slate-400">
+                        Matching lighting, shadows, scale, and perspective.
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
+                  <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center">
                     <ImageIcon size={56} className="opacity-20 mb-4" />
-                    <p className="text-base font-semibold text-slate-300">Your staged image will appear here</p>
-                    <p className="text-xs sm:text-sm mt-1.5 text-center max-w-xs text-slate-400">
-                      Upload a photo of your project and tap Generate.
+                    <p className="text-base md:text-lg font-medium text-slate-400">
+                      Your staged photo will appear here
+                    </p>
+                    <p className="text-xs md:text-sm mt-1.5 max-w-xs text-slate-500">
+                      Pick your item type, upload a photo, and tap Generate Staged Image.
                     </p>
                   </div>
                 )}
@@ -1465,12 +1501,12 @@ CRITICAL INSTRUCTIONS:
 
             {/* Recent Generations Gallery */}
             {history.length > 0 && (
-              <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6">
+              <section className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-5 md:p-6 overflow-hidden">
                 <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800">
-                  <HistoryIcon className="text-blue-600" size={22} />
+                  <HistoryIcon className="text-blue-600" size={20} />
                   Recent Generations
                 </h2>
-                <div className="flex gap-4 overflow-x-auto pb-3 custom-scrollbar">
+                <div className="flex gap-3.5 overflow-x-auto pb-2 custom-scrollbar">
                   {history.map((item) => (
                     <div
                       key={item.id}
@@ -1480,16 +1516,18 @@ CRITICAL INSTRUCTIONS:
                         setPrompt(item.prompt);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      className="flex-shrink-0 w-44 group relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      className="flex-shrink-0 w-40 md:w-44 group relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
                     >
                       <img
                         src={item.staged}
                         alt="History thumbnail"
-                        className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-40 md:h-44 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-3">
-                        <p className="text-white text-xs font-medium truncate">{item.prompt}</p>
-                        <p className="text-slate-300 text-[10px] mt-0.5">{item.time}</p>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                        <p className="text-white text-[11px] font-semibold truncate">
+                          {item.projectType || "Staged Project"}
+                        </p>
+                        <p className="text-slate-300 text-[10px] truncate">{item.prompt}</p>
                       </div>
                     </div>
                   ))}
@@ -1498,126 +1536,116 @@ CRITICAL INSTRUCTIONS:
             )}
           </div>
 
-          {/* =================================================================
-              API KEY SETTINGS MODAL (Private to this browser/device)
-              ================================================================= */}
+          {/* Private API Key Settings Modal */}
           {showSettingsModal && (
             <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                    <KeyIcon size={18} className="text-blue-600" />
-                    Private API Settings
-                  </h3>
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                      <KeyIcon size={18} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">Gemini API Key Settings</h3>
+                  </div>
                   <button
+                    type="button"
                     onClick={() => setShowSettingsModal(false)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                   >
                     <CloseIcon size={18} />
                   </button>
                 </div>
 
-                <form onSubmit={saveSettings} className="p-6 space-y-5">
-                  <div className="text-xs text-slate-600 bg-blue-50 border border-blue-100 rounded-xl p-3.5 leading-relaxed">
-                    <p className="font-semibold text-blue-900 mb-1">100% Private on Your Device</p>
-                    Your Gemini API key is saved only inside this browser's local storage and cookie. It is never stored on GitHub or shared with anyone else.
+                {storageBlocked && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                    Your browser is currently blocking local storage (for example, Private Browsing or an embedded frame). Use the{" "}
+                    <strong>Copy Private Bookmark Link</strong> button below so you never have to re-paste your key!
                   </div>
+                )}
 
-                  {storageBlocked && (
-                    <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3.5 leading-relaxed">
-                      <p className="font-bold mb-1">Browser Storage Appears Blocked</p>
-                      If you're in <strong>Private Browsing</strong> or viewing inside an embedded frame, your browser wipes saved keys when you leave. Open the GitHub Pages link directly in regular Safari/Chrome, or save the Private Bookmark Link below.
-                    </div>
-                  )}
-
+                <form onSubmit={saveSettings} className="space-y-4">
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Gemini API Key
-                      </label>
-                      <a
-                        href="https://aistudio.google.com/apikey"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-semibold text-blue-600 hover:underline"
-                      >
-                        Get Key at AI Studio &rarr;
-                      </a>
-                    </div>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Google AI Studio API Key
+                    </label>
                     <div className="relative">
                       <input
                         type={showKeyText ? "text" : "password"}
                         value={tempKey}
                         onChange={(e) => setTempKey(e.target.value)}
                         placeholder="AIzaSy..."
-                        autoComplete="off"
                         className="w-full p-3 pr-16 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-mono"
                       />
                       <button
                         type="button"
                         onClick={() => setShowKeyText(!showKeyText)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-600 hover:text-blue-800 px-2 py-1"
                       >
                         {showKeyText ? "Hide" : "Show"}
                       </button>
                     </div>
+                    <p className="text-xs text-slate-500">
+                      Stored only in your browser on this device. Get a key at{" "}
+                      <a
+                        href="https://aistudio.google.com/apikey"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline font-medium"
+                      >
+                        aistudio.google.com/apikey
+                      </a>
+                      .
+                    </p>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Image Model (Nano Banana)
+                      Image Model ID
                     </label>
                     <input
                       type="text"
                       value={tempModel}
                       onChange={(e) => setTempModel(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-mono text-slate-700"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none text-xs font-mono text-slate-700"
                     />
-                    <p className="text-[11px] text-slate-500">
-                      Default: <code className="bg-slate-100 px-1 rounded">gemini-3.1-flash-image</code>
-                    </p>
                   </div>
 
-                  {(tempKey.trim() || apiKey) && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-                      <p className="text-[11px] text-slate-600 leading-relaxed">
-                        <strong>Tip:</strong> If your browser keeps forgetting your key, copy this private link and bookmark it (don't share it publicly).
-                      </p>
-                      <button
-                        type="button"
-                        onClick={copyBookmarkLink}
-                        className="w-full py-2 px-3 text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg transition-colors"
-                      >
-                        Copy Private Auto-Login Bookmark Link
-                      </button>
-                    </div>
+                  {(tempKey || apiKey) && (
+                    <button
+                      type="button"
+                      onClick={copyBookmarkLink}
+                      className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors"
+                    >
+                      Copy Private Auto-Login Bookmark Link
+                    </button>
                   )}
 
-                  <div className="flex items-center justify-between gap-3 pt-2">
+                  <div className="flex items-center justify-between gap-2 pt-2">
                     {apiKey ? (
                       <button
                         type="button"
                         onClick={clearApiKey}
-                        className="px-3 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        className="px-3 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl"
                       >
-                        Clear Key
+                        Remove Key
                       </button>
                     ) : (
-                      <span />
+                      <div />
                     )}
+
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setShowSettingsModal(false)}
-                        className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                        className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm"
+                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm"
                       >
-                        Save Settings
+                        Save Key
                       </button>
                     </div>
                   </div>
@@ -1630,12 +1658,12 @@ CRITICAL INSTRUCTIONS:
     };
 
     const root = ReactDOM.createRoot(document.getElementById("root"));
-    window.__STAGER_MOUNTED__ = true;
     root.render(
       <ErrorBoundary>
         <App />
       </ErrorBoundary>
     );
+    window.__STAGER_MOUNTED__ = true;
   </script>
 </body>
 </html>
