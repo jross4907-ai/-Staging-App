@@ -357,15 +357,15 @@
       },
       {
         id: "cross",
-        title: "Floating Cross",
-        subtitle: "3D Wall Crosses",
+        title: "Standing Cross",
+        subtitle: "Tabletop Crosses w/ Base",
         badge: "✝️",
-        defaultType: "Floating Wooden Cross",
-        defaultSize: '24" x 15"',
-        defaultPlacement: "Wall Mounted / Floating",
+        defaultType: "Standing Wooden Cross with Engraved Base",
+        defaultSize: '16" x 10"',
+        defaultPlacement: "Tabletop / Mantel / Shelf",
         presetCategory: "Crosses",
         defaultPrompt:
-          "Mounted floating slightly off a bright white farmhouse shiplap entryway wall, casting a soft realistic 3D shadow behind it. Warm natural morning light and a console table with greenery below."
+          "Standing upright on a warm rustic wooden fireplace mantel with soft natural daylight, framed family photos and subtle eucalyptus greenery nearby, keeping the engraved Bible verse on the base clearly visible."
       },
       {
         id: "seasonal",
@@ -395,7 +395,7 @@
 
     const QUICK_PROJECT_TYPES = [
       { label: "Wood Wavy Flag", size: '36" x 19.5"', placement: "Wall Mounted / Floating" },
-      { label: "Floating Wooden Cross", size: '24" x 15"', placement: "Wall Mounted / Floating" },
+      { label: "Standing Wooden Cross with Engraved Base", size: '16" x 10"', placement: "Tabletop / Mantel / Shelf" },
       { label: "Fall / Autumn Decor", size: '18" x 14"', placement: "Tabletop / Mantel / Shelf" },
       { label: "Christmas / Holiday Decor", size: '20" x 16"', placement: "Tabletop / Mantel / Shelf" },
       { label: "Porch Leaner Sign", size: '48" x 10"', placement: "Front Porch / Floor Standing" },
@@ -439,23 +439,23 @@
       // Crosses
       {
         category: "Crosses",
-        label: "Cross: White Shiplap Entry",
-        text: "Mounted floating slightly off a bright white farmhouse shiplap entryway wall, casting a soft realistic 3D shadow behind it. Warm natural morning light and a wood console table with eucalyptus greenery below."
+        label: "Cross: Fireplace Mantel",
+        text: "Standing upright on a warm rustic wooden fireplace mantel with soft natural daylight, framed family photos and subtle eucalyptus greenery nearby, keeping the engraved Bible verse on the base clearly visible."
       },
       {
         category: "Crosses",
-        label: "Cross: Sunlit Living Room",
-        text: "Mounted floating on a warm cream plaster living room wall with soft afternoon sunlight streaming across the wall, highlighting the wood grain and creating a crisp floating shadow."
+        label: "Cross: Entryway Console",
+        text: "Standing upright on a farmhouse entryway console table against a bright white shiplap wall, bathed in warm morning window light with a woven basket and greenery beside it, with the engraved base clearly readable."
       },
       {
         category: "Crosses",
-        label: "Cross: Rustic Stone Accent",
-        text: "Mounted floating on a natural rustic stone accent wall in a cozy family room with warm recessed downlighting emphasizing the craftsmanship and 3D floating depth."
+        label: "Cross: Cozy Bookshelf",
+        text: "Standing upright on a natural oak bookshelf in a sunlit living room alongside linen-bound books and warm home accents, keeping the standing base and engraved Bible verse sharp and legible."
       },
       {
         category: "Crosses",
-        label: "Cross: Cozy Bedroom Wall",
-        text: "Mounted floating on a calm, neutral taupe bedroom wall above a wooden headboard with soft natural window light and cozy linen bedding."
+        label: "Cross: Bedside Nightstand",
+        text: "Standing upright on a warm wooden bedside nightstand with soft morning window light, a ceramic lamp, and cozy neutral bedroom decor, clearly showcasing the wooden base and engraving."
       },
       // Seasonal
       {
@@ -811,11 +811,11 @@
 
           finalPrompt += `
 CRITICAL INSTRUCTIONS:
-- Automatically remove the original workbench, floor, or room background from the provided photo so ONLY the handcrafted wooden project itself is placed into the new scene.
+- Automatically remove the original workbench, floor, or room background from the provided photo so ONLY the handcrafted wooden project itself (including its standing base if present) is placed into the new scene.
 - PLACEMENT: ${placementRule}
 - Ensure the item is scaled realistically relative to the furniture, walls, mantels, porch elements, and overall room size.
 - Match realistic shadows, ambient reflections, lighting direction, and perspective.
-- DO NOT alter the wood grain, paint/stain colors, carvings, stars/stripes, or exact shape of the handcrafted item. Preserve the original craftsmanship faithfully.`;
+- DO NOT alter the wood grain, paint/stain colors, carvings, engraved Bible verses or lettering on the base, stars/stripes, or exact shape of the handcrafted item. Preserve the original craftsmanship and text faithfully.`;
 
           const payload = {
             contents: [
