@@ -342,17 +342,63 @@
       return "";
     };
 
+    const QUICK_PROJECT_TYPES = [
+      { label: "Wood Wavy Flag", size: '36" x 19.5"', placement: "Wall Mounted / Floating" },
+      { label: "Floating Wooden Cross", size: '24" x 15"', placement: "Wall Mounted / Floating" },
+      { label: "Fall / Autumn Decor", size: '18" x 14"', placement: "Tabletop / Mantel / Shelf" },
+      { label: "Christmas / Holiday Decor", size: '20" x 16"', placement: "Tabletop / Mantel / Shelf" },
+      { label: "Porch Leaner Sign", size: '48" x 10"', placement: "Front Porch / Floor Standing" },
+      { label: "Cutting / Charcuterie Board", size: '18" x 12"', placement: "Tabletop / Mantel / Shelf" },
+      { label: "Custom Wood Wall Sign", size: '24" x 12"', placement: "Wall Mounted / Floating" }
+    ];
+
+    const PLACEMENT_OPTIONS = [
+      "Auto (Based on Scene)",
+      "Wall Mounted / Floating",
+      "Tabletop / Mantel / Shelf",
+      "Front Porch / Floor Standing"
+    ];
+
+    const PRESET_CATEGORIES = [
+      "All",
+      "Crosses",
+      "Seasonal",
+      "Living & Wall",
+      "Kitchen & Dining",
+      "Man Cave & Patio"
+    ];
+
     const PRESET_PROMPTS = [
-      { label: "Rustic: Brick Fireplace", text: "Mounted on the wall of a well-lit, rustic living room above a brick fireplace. Cozy lighting." },
-      { label: "Rustic: Log Cabin", text: "Placed in a rustic log cabin with a grand stone fireplace. Warm fire glowing, dim ambient lighting." },
-      { label: "Kitchen: Farmhouse", text: "Placed in a modern farmhouse kitchen with bright natural light, white marble countertops, and rustic accents." },
-      { label: "Living Room: Modern", text: "Placed in a cozy, modern living room. Bright natural light, neutral color palette, stylish decor." },
-      { label: "Living Room: Industrial", text: "Placed in an industrial loft living room with exposed red brick walls and large factory windows." },
-      { label: "Man Cave: Upscale", text: "Placed in a moody, upscale man cave with warm amber accent lighting and dark wood finishes." },
-      { label: "Man Cave: Home Bar", text: "Displayed behind a custom wood home bar with warm pendant lights, leather stools, and sports memorabilia." },
-      { label: "Patio: Outdoor BBQ", text: "Placed in a beautiful backyard patio next to an outdoor BBQ kitchen setup. Bright summer afternoon lighting." },
-      { label: "Patio: Twilight Deck", text: "Displayed on a covered cedar patio deck at twilight with warm Edison string lights glowing softly." },
-      { label: "Dining: Elegant", text: "Placed in an elegant dining room with a large wooden table, ambient chandelier lighting, and a cozy atmosphere." }
+      // Crosses & Faith
+      { category: "Crosses", label: "Cross: Sunlit Shiplap Wall", text: "Mounted floating slightly off a bright white farmhouse shiplap entryway wall, casting a soft realistic 3D shadow behind it. Warm natural morning light and a console table with greenery below." },
+      { category: "Crosses", label: "Cross: Warm Entryway", text: "Mounted prominently on a warm neutral plaster wall in an inviting home entryway above a rustic wooden bench with neutral throw pillows. Soft natural sunlight." },
+      { category: "Crosses", label: "Cross: Cozy Bedroom Wall", text: "Mounted as a peaceful focal point on a soft beige bedroom wall above a wooden headboard. Warm, serene afternoon lighting and cozy linen bedding." },
+      { category: "Crosses", label: "Cross: Fireplace Mantel", text: "Mounted above a rustic timber fireplace mantel with subtle neutral candlesticks and eucalyptus garland. Cozy, welcoming living room lighting." },
+      { category: "Crosses", label: "Cross: Prayer / Reading Nook", text: "Mounted on a textured warm gray wall in a quiet reading nook next to a cozy armchair and soft floor lamp glow." },
+
+      // Seasonal Items
+      { category: "Seasonal", label: "Fall: Front Porch", text: "Staged on a welcoming covered farmhouse front porch decorated for Fall, surrounded by pumpkins, mums in rustic planters, and warm autumn afternoon sunlight." },
+      { category: "Seasonal", label: "Fall: Cozy Mantel", text: "Staged on a rustic wood fireplace mantel decorated for Autumn with warm amber candlelight, subtle fall leaves, and cozy living room lighting." },
+      { category: "Seasonal", label: "Christmas: Fireplace Mantel", text: "Staged in a warm, festive living room decorated for Christmas with pine garland, warm white twinkle lights, and a glowing fireplace in the background." },
+      { category: "Seasonal", label: "Christmas: Winter Porch", text: "Staged on a charming winter front porch with evergreen garlands, red berries, warm lantern glow, and soft winter daylight." },
+      { category: "Seasonal", label: "Spring: Farmhouse Shelf", text: "Staged on a bright farmhouse entryway console table decorated for Spring with fresh white florals, greenery, and airy natural window light." },
+      { category: "Seasonal", label: "4th of July: Summer Porch", text: "Staged on a sunny Americana front porch in summer with classic wooden rocking chairs, subtle patriotic accents, and bright golden hour sunlight." },
+
+      // Living & Wall
+      { category: "Living & Wall", label: "Rustic: Brick Fireplace", text: "Mounted on the wall of a well-lit, rustic living room above a brick fireplace. Cozy lighting." },
+      { category: "Living & Wall", label: "Rustic: Log Cabin", text: "Placed in a rustic log cabin with a grand stone fireplace. Warm fire glowing, dim ambient lighting." },
+      { category: "Living & Wall", label: "Living Room: Modern", text: "Placed in a cozy, modern living room. Bright natural light, neutral color palette, stylish decor." },
+      { category: "Living & Wall", label: "Living Room: Industrial", text: "Placed in an industrial loft living room with exposed red brick walls and large factory windows." },
+
+      // Kitchen & Dining
+      { category: "Kitchen & Dining", label: "Kitchen: Farmhouse", text: "Placed in a modern farmhouse kitchen with bright natural light, white marble countertops, and rustic accents." },
+      { category: "Kitchen & Dining", label: "Dining: Elegant", text: "Placed in an elegant dining room with a large wooden table, ambient chandelier lighting, and a cozy atmosphere." },
+
+      // Man Cave & Patio
+      { category: "Man Cave & Patio", label: "Man Cave: Upscale", text: "Placed in a moody, upscale man cave with warm amber accent lighting and dark wood finishes." },
+      { category: "Man Cave & Patio", label: "Man Cave: Home Bar", text: "Displayed behind a custom wood home bar with warm pendant lights, leather stools, and sports memorabilia." },
+      { category: "Man Cave & Patio", label: "Patio: Outdoor BBQ", text: "Placed in a beautiful backyard patio next to an outdoor BBQ kitchen setup. Bright summer afternoon lighting." },
+      { category: "Man Cave & Patio", label: "Patio: Twilight Deck", text: "Displayed on a covered cedar patio deck at twilight with warm Edison string lights glowing softly." }
     ];
 
     /* =========================================================================
@@ -374,6 +420,8 @@
       const [mimeType, setMimeType] = useState(null);
       const [projectType, setProjectType] = useState("Wood Wavy American Flag");
       const [projectSize, setProjectSize] = useState('36" x 19.5"');
+      const [placementStyle, setPlacementStyle] = useState("Auto (Based on Scene)");
+      const [activePresetCategory, setActivePresetCategory] = useState("All");
       const [prompt, setPrompt] = useState(
         "Mounted on the wall of a well-lit, rustic living room above a brick fireplace. The lighting should be realistic, cozy, and high quality."
       );
@@ -477,7 +525,7 @@
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${SUGGESTION_MODEL}:generateContent?key=${encodeURIComponent(activeKey)}`;
 
           const aiPrompt =
-            "Analyze this woodworking project. Create 3 highly descriptive staging environment prompts suitable for a Facebook Marketplace listing. The environments should complement the style of the item perfectly. Return ONLY a JSON object with a single property 'prompts' containing an array of 3 strings. Each string should be a full descriptive prompt.";
+            "Analyze this handcrafted woodworking item (such as a wood flag, floating wooden cross, seasonal holiday decor, porch sign, or cutting board). Create 3 highly descriptive staging environment prompts suitable for a Facebook Marketplace listing. Match the season, style, and natural placement (wall-mounted with floating shadow, mantel, tabletop, or front porch) of the item. Return ONLY a JSON object with a single property 'prompts' containing an array of 3 strings. Each string should be a full descriptive prompt.";
 
           const payload = {
             contents: [
@@ -607,6 +655,14 @@
           )}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
           let finalPrompt = `Take the provided image of the ${projectType} and perfectly integrate it into the following scene: ${prompt}. The physical dimensions of this item are approximately ${projectSize}. `;
+
+          if (placementStyle === "Wall Mounted / Floating") {
+            finalPrompt += `Mount the item securely on the wall; if it is a floating cross or 3D wall piece, cast a realistic soft drop-shadow behind it so it visibly stands out from the wall. `;
+          } else if (placementStyle === "Tabletop / Mantel / Shelf") {
+            finalPrompt += `Rest the item naturally on a flat tabletop, mantel, counter, or shelf with accurate grounded contact shadows. `;
+          } else if (placementStyle === "Front Porch / Floor Standing") {
+            finalPrompt += `Place the item resting naturally on the floor or leaning securely against the wall on a porch with realistic grounded shadows. `;
+          }
 
           if (frameStyle !== "None") {
             finalPrompt += `The item should have a beautiful ${frameStyle} frame around it. `;
@@ -891,7 +947,7 @@ CRITICAL INSTRUCTIONS:
                   </h2>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div className="flex flex-col gap-1 sm:col-span-2">
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
                       <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                         <SparklesIcon size={14} /> Project Type
                       </label>
@@ -899,9 +955,29 @@ CRITICAL INSTRUCTIONS:
                         type="text"
                         value={projectType}
                         onChange={(e) => setProjectType(e.target.value)}
-                        placeholder="e.g., Wavy Flag, Cutting Board, River Table"
+                        placeholder="e.g., Floating Wooden Cross, Fall Decor, Wavy Flag"
                         className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800"
                       />
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {QUICK_PROJECT_TYPES.map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => {
+                              setProjectType(item.label);
+                              setProjectSize(item.size);
+                              setPlacementStyle(item.placement);
+                            }}
+                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                              projectType === item.label
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-1">
@@ -912,9 +988,26 @@ CRITICAL INSTRUCTIONS:
                         type="text"
                         value={projectSize}
                         onChange={(e) => setProjectSize(e.target.value)}
-                        placeholder='e.g., 36" x 19.5"'
+                        placeholder='e.g., 36" x 19.5" or 24" x 15"'
                         className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800"
                       />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                        <LayersIcon size={14} /> Placement Style
+                      </label>
+                      <select
+                        value={placementStyle}
+                        onChange={(e) => setPlacementStyle(e.target.value)}
+                        className="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-slate-800 bg-white"
+                      >
+                        {PLACEMENT_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="flex flex-col gap-1">
@@ -951,7 +1044,7 @@ CRITICAL INSTRUCTIONS:
                       </select>
                     </div>
 
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 sm:col-span-2">
                       <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                         <TypeIcon size={14} /> Watermark Text
                       </label>
@@ -1006,10 +1099,28 @@ CRITICAL INSTRUCTIONS:
                   <div className="text-xs font-bold text-slate-500 uppercase tracking-wider pt-1">
                     Standard Presets:
                   </div>
-                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 custom-scrollbar">
-                    {PRESET_PROMPTS.map((preset, idx) => (
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+                    {PRESET_CATEGORIES.map((cat) => (
                       <button
-                        key={idx}
+                        key={cat}
+                        type="button"
+                        onClick={() => setActivePresetCategory(cat)}
+                        className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                          activePresetCategory === cat
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
+                    {PRESET_PROMPTS.filter(
+                      (p) => activePresetCategory === "All" || p.category === activePresetCategory
+                    ).map((preset, idx) => (
+                      <button
+                        key={`${preset.label}-${idx}`}
                         type="button"
                         onClick={() => setPrompt(preset.text)}
                         className="text-xs font-medium px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700 transition-colors border border-transparent hover:border-blue-200"
